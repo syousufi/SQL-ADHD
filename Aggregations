@@ -1,1 +1,5 @@
+-- aggregations.sql
+SELECT age_group, COUNT(*) AS patient_count
+FROM patient_info
+GROUP BY age_group;
 
