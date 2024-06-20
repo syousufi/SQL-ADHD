@@ -1,1 +1,128 @@
 
+WITH AgeSummary AS (
+    SELECT age_group, COUNT(*) AS patient_count
+    FROM patient_info
+    GROUP BY age_group
+)
+SELECT a.age_group, a.patient_count, c.avg_omission_errors
+FROM AgeSummary a
+JOIN (
+    SELECT age_group, AVG(omission_errors) AS avg_omission_errors
+    FROM patient_info p
+    JOIN CPT_II_ConnersContinuousPerformanceTest c ON p.patient_id = c.patient_id
+    GROUP BY age_group
+) c ON a.age_group = c.age_group;
+
+
+
+
+-- Advanced Queries using CTEs and Window Functions
+
+-- Common Table Expressions to calculate the average omission errors by age group
+WITH AgeGroupOmissions AS (
+    SELECT age_group, AVG(omission_errors) AS avg_omission_errors
+    FROM patient_info p
+    JOIN CPT_II_ConnersContinuousPerformanceTest c ON p.patient_id = c.patient_id
+    GROUP BY age_group
+)
+SELECT age_group, avg_omission_errors
+FROM AgeGroupOmissions;
+
+-- Using window function to calculate running total of omission errors
+SELECT patient_id, age_group, omission_errors,
+       SUM(omission_errors) OVER (PARTITION BY age_group ORDER BY patient_id) AS running_total_omission_errors
+FROM patient_info p
+JOIN CPT_II_ConnersContinuousPerformanceTest c ON p.patient_id = c.patient_id;
+
+
+
+-- Recursive CTE Example
+
+-- Example of a simple hierarchy where each patient refers to another patient (e.g., referrals)
+WITH RECURSIVE PatientReferrals AS (
+    SELECT patient_id, referred_by, 1 AS level
+    FROM patient_info
+    WHERE referred_by IS NULL  -- Start with patients who have no referrer
+    UNION ALL
+    SELECT p.patient_id, p.referred_by, pr.level + 1
+    FROM patient_info p
+    JOIN PatientReferrals pr ON p.referred_by = pr.patient_id
+)
+SELECT patient_id, referred_by, level
+FROM PatientReferrals
+ORDER BY level, patient_id;
+
+
+-- Subqueries in SELECT and FROM Clauses
+
+-- Subquery in SELECT clause to calculate total errors for each patient
+SELECT patient_id, age, sex,
+       (SELECT SUM(omission_errors + commission_errors)
+        FROM CPT_II_ConnersContinuousPerformanceTest c
+        WHERE p.patient_id = c.patient_id) AS total_errors
+FROM patient_info p;
+
+-- Subquery in FROM clause to get patients with more than 5 errors
+SELECT p.patient_id, p.age, p.sex, c.total_errors
+FROM patient_info p
+JOIN (
+    SELECT patient_id, SUM(omission_errors + commission_errors) AS total_errors
+    FROM CPT_II_ConnersContinuousPerformanceTest
+    GROUP BY patient_id
+) c ON p.patient_id = c.patient_id
+WHERE c.total_errors > 5;
+
+
+-- Correlated Subqueries Example
+
+-- Example of correlated subquery to find patients with above-average errors for their age group
+SELECT patient_id, age, sex, omission_errors, commission_errors
+FROM patient_info p
+JOIN CPT_II_ConnersContinuousPerformanceTest c ON p.patient_id = c.patient_id
+WHERE (omission_errors + commission_errors) > (
+    SELECT AVG(omission_errors + commission_errors)
+    FROM patient_info pi
+    JOIN CPT_II_ConnersContinuousPerformanceTest ci ON pi.patient_id = ci.patient_id
+    WHERE pi.age_group = p.age_group
+);
+
+
+-- Pivoting Data Example
+-- Pivot the data to show the average errors per age group in separate columns
+SELECT age_group,
+       AVG(CASE WHEN sex = 0 THEN omission_errors END) AS avg_omission_errors_female,
+       AVG(CASE WHEN sex = 1 THEN omission_errors END) AS avg_omission_errors_male,
+       AVG(CASE WHEN sex = 0 THEN commission_errors END) AS avg_commission_errors_female,
+       AVG(CASE WHEN sex = 1 THEN commission_errors END) AS avg_commission_errors_male
+FROM patient_info p
+JOIN CPT_II_ConnersContinuousPerformanceTest c ON p.patient_id = c.patient_id
+GROUP BY age_group;
+
+
+-- JSON Functions Example
+
+-- Store JSON data in a table and extract values using JSON functions
+CREATE TABLE patient_json_data (
+    patient_id INT PRIMARY KEY,
+    patient_data JSON
+);
+
+-- Insert sample data
+INSERT INTO patient_json_data (patient_id, patient_data) VALUES
+(1, '{"name": "John Doe", "age": 30, "medications": ["med1", "med2"]}'),
+(2, '{"name": "Jane Smith", "age": 25, "medications": ["med3"]}');
+
+-- Extract data from JSON
+SELECT patient_id,
+       patient_data->>'$.name' AS name,
+       patient_data->>'$.age' AS age,
+       JSON_UNQUOTE(JSON_EXTRACT(patient_data, '$.medications[0]')) AS first_medication
+FROM patient_json_data;
+
+--Notes:
+--CTEs and Recursive CTEs: Improve readability and manage complex hierarchical data.
+--Window Functions: Allow calculations across a set of table rows related to the current row.
+--Subqueries: Enable complex filtering and calculation within a query.
+--Correlated Subqueries: Perform row-wise calculations using data from the outer query.
+--Pivoting Data: Transforms row data into columns for better analysis.
+--JSON Functions: Useful for storing and querying semi-structured data within SQL databases.
