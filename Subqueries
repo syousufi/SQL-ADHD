@@ -1,1 +1,5 @@
+-- subqueries.sql
+SELECT patient_id, age
+FROM patient_info
+WHERE age = (SELECT MAX(age) FROM patient_info);
 
