@@ -1,1 +1,5 @@
+-- joins.sql
+SELECT p.patient_id, p.age, c.omission_errors, c.commission_errors
+FROM patient_info p
+JOIN CPT_II_ConnersContinuousPerformanceTest c ON p.patient_id = c.patient_id;
 
