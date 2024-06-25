@@ -1,6 +1,5 @@
 -- basic_queries.sql
 
--- This is a comment
 SELECT * FROM patient_info LIMIT 5;
 
 SELECT patient_id, age, sex FROM patient_info WHERE age > 30;
