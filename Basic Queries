@@ -1,4 +1,10 @@
 -- basic_queries.sql
-SELECT * FROM patient_info;
-SELECT patient_id, age, sex FROM patient_info WHERE age > 30;
+--SELECT * FROM patient_info;
+--SELECT patient_id, age, sex FROM patient_info WHERE age > 30;
 
+-- basic_queries.sql
+
+-- This is a comment
+SELECT * FROM patient_info LIMIT 5;
+
+SELECT patient_id, age, sex FROM patient_info WHERE age > 30;
